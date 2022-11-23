@@ -10,6 +10,7 @@ import math
 import os
 import seaborn as sns
 import random
+from collections import deque
 #                0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
 brick_matrix=   [  
                 [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
@@ -299,6 +300,36 @@ def generate_matrix():
     Map.generate_matrix(None)
     draw_map(canvas, Map.matrix, Map.path, movement_list)
 
+def update_map_search(canvas, matrix, path, moves):
+    
+    canvas.delete("all")
+    matrix = copy.copy(matrix)
+    # for p in path:
+    #     matrix[p[0]][p[1]] = 1
+    matrix[moves[0]][moves[1]] = -3
+
+    row, col = movement_list[-1]
+    colors = ['#525288', '#F2F2F2', '#525288', '#F2F2F2', '#525288', '#F2F2F2', '#525288', '#F2F2F2']
+    
+    for r in range(rows):
+        for c in range(cols):
+
+            if matrix[r][c] == 0:
+                draw_cell(canvas, r, c, colors[1])
+            elif matrix[r][c] == -1:
+                draw_cell(canvas, r, c, colors[0])
+            elif matrix[r][c] == -2:
+                draw_cell(canvas, r, c, colors[1])#"#525266")                
+            elif matrix[r][c] == 1:
+                draw_pacman(canvas,r,c)
+            elif matrix[r][c] == 2:
+                draw_food(canvas, r, c)
+            elif matrix[r][c] == -3:
+                draw_cell(canvas, r, c, "#525266")
+    # windows.after(500,update_map_search(canvas, matrix, path, moves))
+    # time.sleep(0.1)
+    # print("called\n")
+
 def movement_update_handler(event):
     global movement_list
     global click_counter, back_counter
@@ -335,23 +366,105 @@ def movement_update_handler(event):
     update_map(canvas, Map.matrix, Map.path, movement_list)
     check_reach()
 
+dirs = [
+    lambda x,y :(x+1,y),
+    lambda x,y :(x-1,y),
+    lambda x,y :(x,y-1),
+    lambda x,y :(x,y+1)
+]
+
 def movement_dfs():
     global movement_list
     global click_counter, back_counter
 
-    cur_pos = movement_list[-1]
+    end = (Map.destination[0],Map.destination[1])
+    start = (Map.start[0],Map.start[1])
+    path_list = [start]
 
-    update_map(canvas, Map.matrix, Map.path, movement_list)
-    check_reach()
+    # path_list=[cur_pos]
+    while path_list:
+        cur_pos = path_list[-1]
+        if cur_pos == end:
+            print(path_list)
+            print("RunOutSuccessfly\n")
+            break
+        row , col = cur_pos
+        # 已经走过
+        Map.matrix[row][col] = -2
+        # 上方
+        if Map.matrix[cur_pos[0]-1][cur_pos[1]] == 0 or Map.matrix[cur_pos[0]-1][cur_pos[1]] == 2:
+            path_list.append((cur_pos[0]-1,cur_pos[1]))
+            Map.matrix[cur_pos[0]-1][cur_pos[1]] = 1
+            continue
+        # 下方
+        elif Map.matrix[cur_pos[0]+1][cur_pos[1]] == 0 or Map.matrix[cur_pos[0]+1][cur_pos[1]] == 2:
+            path_list.append((cur_pos[0]+1,cur_pos[1]))
+            Map.matrix[cur_pos[0]+1][cur_pos[1]] = 1
+            continue        
+        # 左方
+        elif Map.matrix[cur_pos[0]][cur_pos[1]-1] == 0 or Map.matrix[cur_pos[0]][cur_pos[1]-1] == 2:
+            path_list.append((cur_pos[0],cur_pos[1]-1))
+            Map.matrix[cur_pos[0]][cur_pos[1]-1] = 1
+            continue        
+        # 右方
+        elif Map.matrix[cur_pos[0]][cur_pos[1]+1] == 0 or Map.matrix[cur_pos[0]][cur_pos[1]+1] == 2:
+            path_list.append((cur_pos[0],cur_pos[1]+1))
+            Map.matrix[cur_pos[0]][cur_pos[1]+1] = 1
+            continue        
+        else: 
+            path_list.pop()
+    else:
+        print("Error\n")
+        
+    for p in path_list:
+        update_map_search(canvas, Map.matrix, Map.path, p)
+        
+    # check_reach()
 
 def movement_bfs():
     global movement_list
     global click_counter, back_counter
-
+    end = (Map.destination[0],Map.destination[1])
+    start = (Map.start[0],Map.start[1])
     cur_pos = movement_list[-1]
+    path_list = []
+    #创建队列 起点入队,起点没有上一节点所里这里的联系用-1表示
+    queue = deque()
+    queue.append((start[0],start[1],-1))
+    while len(queue)>0:
+        curnode = queue.popleft()
+        path_list.append(curnode)
+        #找到迷宫终点跳出循环
+        if curnode[0] == end[0] and curnode[1] == end[1]:
+            cur = path_list[-1]
+            #存放最终路径结果
+            path_result = []
+            while cur[2] != -1:#只有起点的第三个元素才是-1
+                path_result.append((cur[0],cur[1]))#路径不用储存节点之间的联系
+                cur = path_list[cur[2]]#找到上一节点
+            path_result.reverse()
+            print(path_result)
+            # for path in path_result:
+                # print(path)
+                # print(path_list)
+            print("RunOutSuccessfly\n")
+            for p in path_result:
+                update_map_search(canvas, Map.matrix, Map.path, p)
+            return True    
+        #未找到终点执行循环
+        for dir in dirs:
+            nextnode = dir(curnode[0],curnode[1])
+            #判断下一节点是否可通过
+            if Map.matrix[nextnode[0]][nextnode[1]] == 0 or Map.matrix[nextnode[0]][nextnode[1]] == 2:
+                #队列元素与nextnode形式不同，队列中要加入节点间的联系，上面知道联系储存在path_list中
+                queue.append((nextnode[0],nextnode[1],path_list.index(curnode)))
+                #将循环过的节点标记为走过
+                Map.matrix[nextnode[0]][nextnode[1]] = -2
+                #这里不能break 因为最广是探索所有的路径 所以要找到所有可通过的 最深的只要找到一个就可以了 所以栈那里需要break
+    else:
+        print("Error")
 
-    update_map(canvas, Map.matrix, Map.path, movement_list)
-    check_reach()
+
 
 def movement_ucs():
     global movement_list
@@ -380,11 +493,16 @@ def check_reach():
         canvas.create_rectangle(x0, y0, x1, y1, fill = '#F2F2F2', outline ='#525288', width = 3)
         canvas.create_text(cols * cell_width / 2, y0 + 20, text = "Congratulations! You Eat all the food! ", fill = "#525288")
         next_Map_flag = True
+        return True
 
 def _event_handler(event):
     if event.keysym in ['Left', 'Right', 'Up', 'Down', 'w', 'a', 's', 'd']:
         movement_update_handler(event)
-    elif event.keysym == 'F3':
+    elif event.keysym == 'F1':
+        movement_dfs()
+    elif event.keysym == 'F2':
+        movement_bfs()
+    elif event.keysym == 'F5':
         windows.quit()
 
 if __name__ == '__main__':
@@ -409,10 +527,12 @@ if __name__ == '__main__':
 
     filemenu = tk.Menu(menubar, tearoff=0)
     menubar.add_cascade(label='设置', menu=filemenu)
-    # filemenu.add_command(label='单 agent', command=_open_map, accelerator='F1')
-    # filemenu.add_command(label='双 agent', command=_save_map, accelerator='F2')
+    filemenu.add_command(label='深度优先', command=movement_dfs, accelerator='F1')
+    filemenu.add_command(label='广度优先', command=movement_bfs, accelerator='F2')
+    # filemenu.add_command(label='一致代价', command=movement_ucs, accelerator='F3')
+    # filemenu.add_command(label='A*', command=movement_a, accelerator='F4')
     filemenu.add_separator()
-    filemenu.add_command(label='退出', command=windows.quit, accelerator='F3')
+    filemenu.add_command(label='退出', command=windows.quit, accelerator='F5')
 
     windows.config(menu=menubar)
     # end 创建菜单栏
