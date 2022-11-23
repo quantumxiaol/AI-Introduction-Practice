@@ -1,6 +1,4 @@
-# @Author: Howard Wonanut
-# @Version: v1.0.7
-# @Date: 2020-02-04
+
 
 import tkinter as tk
 

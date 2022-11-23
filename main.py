@@ -1,5 +1,17 @@
 import tkinter as tk
-from tkinter import *
+
+import tkinter as tk
+from tkinter.messagebox import showinfo
+from tkinter import filedialog
+from mazeGenerator import Maze
+import pandas as pd
+import numpy as np
+from PIL import Image
+import time
+import copy
+import math
+import os
+
 # 调用Tk()创建主窗口
 root_window =tk.Tk()
 root_window.title('Pac Man')
@@ -11,7 +23,7 @@ screenwidth = root_window.winfo_screenwidth()
 screenheight = root_window.winfo_screenheight()
 size_geo = '%dx%d+%d+%d' % (window_width, window_height, (screenwidth-window_width)/2, (screenheight-window_height)/2)
 root_window.geometry(size_geo)
-canvas = Canvas(root_window,width = 1200,height = 900,bg='white')
+canvas = tk.Canvas(root_window,width = 1200,height = 900,bg='white')
 x0,y0,x1,y1 = 10,10,100,100
 man = canvas.create_arc(x0, y0, x1, y1,start = 30, extent = 300, fill = '#B0E0E6',outline ='yellow',width = 2)
 canvas.pack()
