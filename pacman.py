@@ -10,7 +10,7 @@ import math
 import os
 import seaborn as sns
 import random
-#               0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
+#                0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
 brick_matrix=   [  
                 [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
                 [-1, 0, 0, 0, 0,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1, 0,-1, 0, 0,-1, 0, 0, 0, 0, 0, 0,-1, 0, 0,-1],
@@ -63,12 +63,12 @@ class UnionSet(object):
 		self.parent[self.find(root1)] = self.find(root2)
 
 class Map:
-    def __init__(self, width = 11, height = 11):
+    def __init__(self, width = 31, height = 31):
         assert width >= 5 and height >= 5, "Length of width or height must be larger than 5."
         self.width = (width // 2) * 2 + 1
         self.height = (height // 2) * 2 + 1
-        self.start = [1, 0]
-        self.destination = [self.height - 2, self.width - 1]
+        self.start = [14, 15]
+        self.destination = [self.height - 2, self.width - 2]
         self.matrix = None
         self.path = []
 
@@ -100,13 +100,14 @@ class Map:
         self.path = []
         self.width = (width // 2) * 2 + 1
         self.height = (height // 2) * 2 + 1
-        self.start = [1, 0]
-        self.destination = [self.height - 2, self.width - 1]
+        self.start = [14, 15]
+
+        self.destination = [self.height - 2, self.width - 2]
         self.generate_matrix(mode, new_matrix)
 
 
     def generate_matrix_dfs(self):
-        # 地图初始化，并将出口和入口处的值设置为0
+        # 地图初始化
         self.matrix = -np.ones((self.height, self.width))
         self.matrix[self.start[0], self.start[1]] = 0
         self.matrix[self.destination[0], self.destination[1]] = 0
@@ -143,6 +144,8 @@ class Map:
 
     def generate_matrix_brick(self):
         self.matrix = brick_matrix
+        self.matrix[self.start[0]][self.start[1]] = 1
+        self.matrix[self.destination[0]][self.destination[1]] = 2
 
 	# 迷宫寻路算法dfs
     def find_path_dfs(self, destination):
@@ -166,6 +169,11 @@ def draw_pacman(canvas, row, col,color='#B0E0E6'):
     canvas.create_arc(x0, y0, x1, y1,start = 30, extent = 300, fill = color,outline ='yellow',width = 0)
 
 def draw_cell(canvas, row, col, color="#F2F2F2"):
+    x0, y0 = col * cell_width, row * cell_width
+    x1, y1 = x0 + cell_width, y0 + cell_width
+    canvas.create_rectangle(x0, y0, x1, y1, fill = color, outline =color, width = 0)
+
+def draw_food(canvas, row, col, color="#EE3F4D"):
     x0, y0 = col * cell_width, row * cell_width
     x1, y1 = x0 + cell_width, y0 + cell_width
     canvas.create_rectangle(x0, y0, x1, y1, fill = color, outline =color, width = 0)
@@ -214,22 +222,21 @@ def draw_path(canvas, matrix, row, col, color, line_color):
 
 def draw_map(canvas, matrix, path, moves):
     """
-    根据matrix中每个位置的值绘图：
+    根据matrix中每个位置的值绘图
     -1: 墙壁
-    0: 空白
-    1: pacman
-    2: food
-    3: ghost
-
+    0 : 空白
+    1 : pacman
+    2 : food
+    3 : ghost
     """
 
     canvas.delete("all")
     matrix = copy.copy(matrix)
     
-    for p in path:
-        matrix[p[0]][p[1]] = 1
-    for move in moves:
-        matrix[move[0]][move[1]] = 2
+    # for p in path:
+    #     matrix[p[0]][p[1]] = 1
+    # for move in moves:
+    #     matrix[move[0]][move[1]] = 2
     for r in range(rows):
         for c in range(cols):
             if matrix[r][c] == 0:
@@ -237,46 +244,50 @@ def draw_map(canvas, matrix, path, moves):
             elif matrix[r][c] == -1:
                 draw_cell(canvas, r, c, '#525288')
             elif matrix[r][c] == 1:
-                draw_cell(canvas, r, c)
-                draw_path(canvas, matrix, r, c, '#bc84a8', '#bc84a8')
+
+                # draw_cell(canvas, r, c)
+                draw_pacman(canvas,r,c)
+                # draw_path(canvas, matrix, r, c, '#bc84a8', '#bc84a8')
             elif matrix[r][c] == 2:
-                draw_cell(canvas, r, c)
-                draw_path(canvas, matrix, r, c, '#ee3f4d', '#ee3f4d')
+                draw_food(canvas, r, c)
+                # draw_path(canvas, matrix, r, c, '#ee3f4d', '#ee3f4d')
 
 def update_map(canvas, matrix, path, moves):
     
     canvas.delete("all")
     matrix = copy.copy(matrix)
-    for p in path:
-        matrix[p[0]][p[1]] = 1
-    for move in moves:
-        matrix[move[0]][move[1]] = 2
+    # for p in path:
+    #     matrix[p[0]][p[1]] = 1
+    # for move in moves:
+    #     matrix[move[0]][move[1]] = 2
 
     row, col = movement_list[-1]
     colors = ['#525288', '#F2F2F2', '#525288', '#F2F2F2', '#525288', '#F2F2F2', '#525288', '#F2F2F2']
     
     for r in range(rows):
         for c in range(cols):
-            distance = (row - r) * (row - r) + (col - c) * (col - c)
-            if distance >= 100:
-                color = colors[0:2]
-            elif distance >= 60:
-                color = colors[2:4]
-            elif distance >= 30:
-                color = colors[4:6]
-            else:
-                color = colors[6:8]
+            # distance = (row - r) * (row - r) + (col - c) * (col - c)
+            # if distance >= 100:
+            #     color = colors[0:2]
+            # elif distance >= 60:
+            #     color = colors[2:4]
+            # elif distance >= 30:
+            #     color = colors[4:6]
+            # else:
+            #     color = colors[6:8]
 
             if matrix[r][c] == 0:
-                draw_cell(canvas, r, c, color[1])
+                draw_cell(canvas, r, c, colors[1])
             elif matrix[r][c] == -1:
-                draw_cell(canvas, r, c, color[0])
+                draw_cell(canvas, r, c, colors[0])
             elif matrix[r][c] == 1:
-                draw_cell(canvas, r, c, color[1])
-                draw_path(canvas, matrix, r, c, '#bc84a8', '#bc84a8')
+                draw_pacman(canvas,r,c)
+                # draw_cell(canvas, r, c, colors[1])
+                # draw_path(canvas, matrix, r, c, '#bc84a8', '#bc84a8')
             elif matrix[r][c] == 2:
-                draw_cell(canvas, r, c, color[1])
-                draw_path(canvas, matrix, r, c, '#ee3f4d', '#ee3f4d')
+                draw_food(canvas, r, c)
+                # draw_cell(canvas, r, c, colors[1])
+                # draw_path(canvas, matrix, r, c, '#ee3f4d', '#ee3f4d')
     
 
 def generate_matrix():
@@ -291,53 +302,83 @@ def generate_matrix():
 def movement_update_handler(event):
     global movement_list
     global click_counter, back_counter
-    auto_mode = False
+
     cur_pos = movement_list[-1]
+
     ops = {'Left': [0, -1], 'Right': [0, 1], 'Up': [-1, 0], 'Down': [1, 0], 'a': [0, -1], 'd': [0, 1], 'w': [-1, 0], 's': [1, 0]}
     r_, c_ = cur_pos[0] + ops[event.keysym][0], cur_pos[1] + ops[event.keysym][1]
     if len(movement_list) > 1 and [r_, c_] == movement_list[-2]:
         click_counter += 1
         back_counter += 1
         movement_list.pop()
-        if auto_mode:
-            while True:
-                cur_pos = movement_list[-1]
-                counter = 0
-                for d in [[0, 1], [0, -1], [1, 0], [-1, 0]]:
-                    r_, c_ = cur_pos[0] + d[0], cur_pos[1] + d[1]
-                    if c_ >= 0 and Map.matrix[r_][c_] == 0:
-                        counter += 1
-                if counter != 2:
-                    break
-                movement_list.pop()
-    elif r_ < Map.height and c_ < Map.width and Map.matrix[r_][c_] == 0:
-        click_counter += 1
-        if auto_mode:
-            while True:
-                movement_list.append([r_, c_])
-                temp_list = []
-                for d in [[0, 1], [0, -1], [1, 0], [-1, 0]]:
-                    r__, c__ = r_ + d[0], c_ + d[1]
-                    if c__ < Map.width and Map.matrix[r__][c__] == 0 and [r__, c__] != cur_pos:
-                        temp_list.append([r__, c__])
-                if len(temp_list) != 1:
-                    break
-                cur_pos = [r_, c_]
-                r_, c_ = temp_list[0]
-        else:
-            movement_list.append([r_, c_])
+        if  r_ < Map.height and c_ < Map.width and Map.matrix[r_][c_] == 0:
+            click_counter += 1
+        movement_list.append([r_, c_])
     Map.path = []
+
+    # 可以移动
+    if Map.matrix[cur_pos[0]+ops[event.keysym][0]][cur_pos[1]+ops[event.keysym][1]] == 0:
+        Map.matrix[cur_pos[0]][cur_pos[1]] = 0
+        Map.matrix[cur_pos[0]+ops[event.keysym][0]][cur_pos[1]+ops[event.keysym][1]] = 1
+        movement_list.append([r_, c_])
+    elif Map.matrix[cur_pos[0]+ops[event.keysym][0]][cur_pos[1]+ops[event.keysym][1]] == 2:
+        Map.matrix[cur_pos[0]][cur_pos[1]] = 0
+        Map.matrix[cur_pos[0]+ops[event.keysym][0]][cur_pos[1]+ops[event.keysym][1]] = 1
+        movement_list.append([r_, c_])
+    # 不可以移动    
+    elif Map.matrix[cur_pos[0]+ops[event.keysym][0]][cur_pos[1]+ops[event.keysym][1]] ==-1:
+        Map.matrix[cur_pos[0]][cur_pos[1]] = 1
+
+    # Map.matrix[cur_pos[0]][cur_pos[1]]=0
+    # Map.matrix[cur_pos[0]+ops[event.keysym][0]][cur_pos[1]+ops[event.keysym][1]]=1
+
+    update_map(canvas, Map.matrix, Map.path, movement_list)
+    check_reach()
+
+def movement_dfs():
+    global movement_list
+    global click_counter, back_counter
+
+    cur_pos = movement_list[-1]
+
+    update_map(canvas, Map.matrix, Map.path, movement_list)
+    check_reach()
+
+def movement_bfs():
+    global movement_list
+    global click_counter, back_counter
+
+    cur_pos = movement_list[-1]
+
+    update_map(canvas, Map.matrix, Map.path, movement_list)
+    check_reach()
+
+def movement_ucs():
+    global movement_list
+    global click_counter, back_counter
+
+    cur_pos = movement_list[-1]
+
+    update_map(canvas, Map.matrix, Map.path, movement_list)
+    check_reach()
+
+def movement_a():
+    global movement_list
+    global click_counter, back_counter
+
+    cur_pos = movement_list[-1]
+
     update_map(canvas, Map.matrix, Map.path, movement_list)
     check_reach()
 
 def check_reach():
     global next_Map_flag
     if movement_list[-1] == Map.destination:
-        print("Congratulations! You reach the goal! Steps used: {}".format(click_counter))
+        print("Congratulations! You Eat all the food! {}".format(back_counter))
         x0, y0 = cols * cell_width / 2 - 200, 30
         x1, y1 = x0 + 400, y0 + 40
         canvas.create_rectangle(x0, y0, x1, y1, fill = '#F2F2F2', outline ='#525288', width = 3)
-        canvas.create_text(cols * cell_width / 2, y0 + 20, text = "Congratulations! You reach the goal! Back steps: {}".format(back_counter), fill = "#525288")
+        canvas.create_text(cols * cell_width / 2, y0 + 20, text = "Congratulations! You Eat all the food! ", fill = "#525288")
         next_Map_flag = True
 
 def _event_handler(event):
@@ -373,7 +414,6 @@ if __name__ == '__main__':
     filemenu.add_separator()
     filemenu.add_command(label='退出', command=windows.quit, accelerator='F3')
 
-
     windows.config(menu=menubar)
     # end 创建菜单栏
 
@@ -392,4 +432,5 @@ if __name__ == '__main__':
     # canvas.bind("<Button-1>", _paint_answer_path)
     # canvas.bind("<Button-3>", _reset_answer_path)
     canvas.bind_all("<KeyPress>", _event_handler)
+
     windows.mainloop()
