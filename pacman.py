@@ -51,7 +51,7 @@ brick_matrix=   [
 
 class UnionSet(object):
 	"""
-	并查集实现，构造函数中的matrix是一个numpy类型
+	并查集实现,构造函数中的matrix是一个numpy类型
 	"""
 	def __init__(self, arr):
 		self.parent = {pos: pos for pos in arr}
