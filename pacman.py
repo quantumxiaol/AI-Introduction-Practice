@@ -378,19 +378,18 @@ dirs = [
 def getSuccessors(cur_pos):
     able=[]
     if Map.matrix[cur_pos[0]-1][cur_pos[1]] == 0 or Map.matrix[cur_pos[0]-1][cur_pos[1]] == 2:
-        able.append((cur_pos[0]-1,cur_pos[1]))
+        able.append(((cur_pos[0]-1,cur_pos[1]),[-1,0],1))
 
     # 下方
     if Map.matrix[cur_pos[0]+1][cur_pos[1]] == 0 or Map.matrix[cur_pos[0]+1][cur_pos[1]] == 2:
-        able.append((cur_pos[0]+1,cur_pos[1]))
-        Map.matrix[cur_pos[0]+1][cur_pos[1]] = 1       
+        able.append(((cur_pos[0]+1,cur_pos[1]),[1,0],1))       
     # 左方
     if Map.matrix[cur_pos[0]][cur_pos[1]-1] == 0 or Map.matrix[cur_pos[0]][cur_pos[1]-1] == 2:
-        able.append((cur_pos[0],cur_pos[1]-1))
+        able.append(((cur_pos[0],cur_pos[1]-1),[0,-1],1))
         
     # 右方
     if Map.matrix[cur_pos[0]][cur_pos[1]+1] == 0 or Map.matrix[cur_pos[0]][cur_pos[1]+1] == 2:
-        able.append((cur_pos[0],cur_pos[1]+1))
+        able.append(((cur_pos[0],cur_pos[1]+1),[0,1],1))
     return able
 
 
@@ -485,42 +484,48 @@ def movement_bfs():
     else:
         print("Error")
 
-
 def movement_ucs():
     global movement_list
     global click_counter, back_counter
-
-    cur_pos = movement_list[-1]
-
+    end = (Map.destination[0],Map.destination[1])
+    start = (Map.start[0],Map.start[1])
+    cur_pos = start
+    path = [(start)]
     # 初始化相关参数
     result = []
     explored = set()
     frontier = queue.PriorityQueue()
     # 定义起始状态，其中包括开始的位置，对应的行动方案和行动代价
     start = ((Map.start[0],Map.start[1]), [], 0)
+    # print (start)
     # 把起始状态放进frontier队列中，update方法会自动对其中的状态按照其行动代价进行排序
     frontier.put(start,0)
     # 构造循环，循环读取frontier中的状态，进行判定
     while not frontier.empty():
         # 获取当前节点的各项信息
-        (node, path, cost) = frontier.pop()
+        (node, move, cost) = frontier.get()
         # 如果弹出的节点状态满足目标要求，停止循环
-        if node == (Map.end[0],Map.end[1]):
-            result = path
+        if node == (end[0],end[1]):
+            result = move
+            
             break
         # 如果该节点该节点不满足目标要求，判定其是否访问过
         if node not in explored:
             explored.add(node)
             # 遍历这个节点的子节点，更新frontier队列
             for child,direction,step in getSuccessors(node):
-                newPath = path + [direction]
+                newMove = move + [direction]
                 newCost = cost + step
-                newNode = (child, newPath, newCost)
+                newNode = (child, newMove, newCost)
                 frontier.put(newNode, newCost)
     # 返回计算结果，即一个行动方案
     
-    update_map(canvas, Map.matrix, Map.path, movement_list)
-    check_reach()
+    for p in result:
+        update_map_search(canvas, Map.matrix, Map.path, (cur_pos[0]+p[0],cur_pos[1]+p[1]))
+        cur_pos = (cur_pos[0]+p[0],cur_pos[1]+p[1])
+        path.append(cur_pos)
+    print("RunOutSuccessfly\n")
+    print(path)
     return result
 
 def movement_astar():
@@ -581,8 +586,6 @@ def movement_astar():
         # resort the list (SHOULD use a priority queue here to avoid re-sorting all the time)
         fringe.sort(key=comp)
 
-
-
 def movement_a():
     global movement_list
     global click_counter, back_counter
@@ -610,8 +613,8 @@ def _event_handler(event):
         movement_dfs()
     elif event.keysym == 'F2':
         movement_bfs()
-
-
+    elif event.keysym == 'F3':
+        movement_ucs()
     elif event.keysym == 'F4':
         movement_astar()
     elif event.keysym == 'F5':
@@ -641,7 +644,7 @@ if __name__ == '__main__':
     menubar.add_cascade(label='设置', menu=filemenu)
     filemenu.add_command(label='深度优先', command=movement_dfs, accelerator='F1')
     filemenu.add_command(label='广度优先', command=movement_bfs, accelerator='F2')
-    # filemenu.add_command(label='一致代价', command=movement_ucs, accelerator='F3')
+    filemenu.add_command(label='一致代价', command=movement_ucs, accelerator='F3')
     filemenu.add_command(label='A*', command=movement_astar, accelerator='F4')
     filemenu.add_separator()
     filemenu.add_command(label='退出', command=windows.quit, accelerator='F5')
