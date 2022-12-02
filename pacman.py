@@ -146,9 +146,11 @@ class Map:
         self.matrix[self.start[0], self.start[1] + 1] = 0
 
     def generate_matrix_brick(self):
-        self.matrix = brick_matrix
+        self.matrix = copy.copy(brick_matrix)
         self.matrix[self.start[0]][self.start[1]] = 1
         self.matrix[self.destination[0]][self.destination[1]] = 2
+        for i in range(rows):
+            print(self.matrix[i])
 
 	# 迷宫寻路算法dfs
     def find_path_dfs(self, destination):
@@ -331,6 +333,7 @@ def update_map_search(canvas, matrix, path, moves):
     # windows.after(500,update_map_search(canvas, matrix, path, moves))
     # time.sleep(0.1)
     # print("called\n")
+    # matrix[moves[0]][moves[1]] = 0
 
 def movement_update_handler(event):
     global movement_list
@@ -620,6 +623,10 @@ def _event_handler(event):
     elif event.keysym == 'F5':
         windows.quit()
 
+    elif event.keysym == 'F9':
+        generate_matrix()
+
+
 if __name__ == '__main__':
     # 基础参数
 
@@ -648,6 +655,7 @@ if __name__ == '__main__':
     filemenu.add_command(label='A*', command=movement_astar, accelerator='F4')
     filemenu.add_separator()
     filemenu.add_command(label='退出', command=windows.quit, accelerator='F5')
+    filemenu.add_command(label='重新开始', command=generate_matrix, accelerator='F9')
 
     windows.config(menu=menubar)
     # end 创建菜单栏
