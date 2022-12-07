@@ -49,6 +49,13 @@ brick_matrix=   [
                 ]
 # brick_matrix = brick_matrix.reshape(31,31)
 
+brick_matrix=   [  
+                [-1,-1,-1,-1,-1],
+                [-1, 0, 0, 0,-1],
+                [-1, 0, 0, 0,-1],
+                [-1, 0, 0, 0,-1],
+                [-1,-1,-1,-1,-1]]
+
 class UnionSet(object):
 	"""
 	并查集实现,构造函数中的matrix是一个numpy类型
@@ -66,12 +73,12 @@ class UnionSet(object):
 		self.parent[self.find(root1)] = self.find(root2)
 
 class Map:
-    def __init__(self, width = 31, height = 31):
+    def __init__(self, width = 5, height = 5):
         assert width >= 5 and height >= 5, "Length of width or height must be larger than 5."
         self.width = (width // 2) * 2 + 1
         self.height = (height // 2) * 2 + 1
-        self.start = [14, 15]
-        self.destination = [self.height - 2, self.width - 2]
+        self.start = [1, 1]
+        self.destination = [self.height - 2, self.width - 3]
         self.matrix = None
         self.path = []
 
@@ -393,141 +400,6 @@ def getSuccessors(cur_pos):
     return able
 
 
-def movement_dfs():
-    global movement_list
-    global click_counter, back_counter
-
-    end = (Map.destination[0],Map.destination[1])
-    start = (Map.start[0],Map.start[1])
-    path_list = [start]
-
-    # path_list=[cur_pos]
-    while path_list:
-        cur_pos = path_list[-1]
-        if cur_pos == end:
-            print(path_list)
-            print("RunOutSuccessfly\n")
-            break
-        row , col = cur_pos
-        # 已经走过
-        Map.matrix[row][col] = -2
-        # 上方
-        if Map.matrix[cur_pos[0]-1][cur_pos[1]] == 0 or Map.matrix[cur_pos[0]-1][cur_pos[1]] == 2:
-            path_list.append((cur_pos[0]-1,cur_pos[1]))
-            Map.matrix[cur_pos[0]-1][cur_pos[1]] = 1
-            continue
-        # 下方
-        elif Map.matrix[cur_pos[0]+1][cur_pos[1]] == 0 or Map.matrix[cur_pos[0]+1][cur_pos[1]] == 2:
-            path_list.append((cur_pos[0]+1,cur_pos[1]))
-            Map.matrix[cur_pos[0]+1][cur_pos[1]] = 1
-            continue        
-        # 左方
-        elif Map.matrix[cur_pos[0]][cur_pos[1]-1] == 0 or Map.matrix[cur_pos[0]][cur_pos[1]-1] == 2:
-            path_list.append((cur_pos[0],cur_pos[1]-1))
-            Map.matrix[cur_pos[0]][cur_pos[1]-1] = 1
-            continue        
-        # 右方
-        elif Map.matrix[cur_pos[0]][cur_pos[1]+1] == 0 or Map.matrix[cur_pos[0]][cur_pos[1]+1] == 2:
-            path_list.append((cur_pos[0],cur_pos[1]+1))
-            Map.matrix[cur_pos[0]][cur_pos[1]+1] = 1
-            continue        
-        else: 
-            path_list.pop()
-    else:
-        print("Error\n")
-        
-    for p in path_list:
-        update_map_search(canvas, Map.matrix, Map.path, p)
-        
-    # check_reach()
-
-def movement_bfs():
-    global movement_list
-    global click_counter, back_counter
-    end = (Map.destination[0],Map.destination[1])
-    start = (Map.start[0],Map.start[1])
-    cur_pos = movement_list[-1]
-    path_list = []
-    #创建队列 起点入队,起点没有上一节点所里这里的联系用-1表示
-    queue = deque()
-    queue.append((start[0],start[1],-1))
-    while len(queue)>0:
-        curnode = queue.popleft()
-        path_list.append(curnode)
-        #找到迷宫终点跳出循环
-        if curnode[0] == end[0] and curnode[1] == end[1]:
-            cur = path_list[-1]
-            #存放最终路径结果
-            path_result = []
-            while cur[2] != -1:#只有起点的第三个元素才是-1
-                path_result.append((cur[0],cur[1]))#路径不用储存节点之间的联系
-                cur = path_list[cur[2]]#找到上一节点
-            path_result.reverse()
-            print(path_result)
-            # for path in path_result:
-                # print(path)
-                # print(path_list)
-            print("RunOutSuccessfly\n")
-            for p in path_result:
-                update_map_search(canvas, Map.matrix, Map.path, p)
-            return True    
-        #未找到终点执行循环
-        for dir in dirs:
-            nextnode = dir(curnode[0],curnode[1])
-            #判断下一节点是否可通过
-            if Map.matrix[nextnode[0]][nextnode[1]] == 0 or Map.matrix[nextnode[0]][nextnode[1]] == 2:
-                #队列元素与nextnode形式不同，队列中要加入节点间的联系，上面知道联系储存在path_list中
-                queue.append((nextnode[0],nextnode[1],path_list.index(curnode)))
-                #将循环过的节点标记为走过
-                Map.matrix[nextnode[0]][nextnode[1]] = -2
-                #这里不能break 因为最广是探索所有的路径 所以要找到所有可通过的 最深的只要找到一个就可以了 所以栈那里需要break
-    else:
-        print("Error")
-
-def movement_ucs():
-    global movement_list
-    global click_counter, back_counter
-    end = (Map.destination[0],Map.destination[1])
-    start = (Map.start[0],Map.start[1])
-    cur_pos = start
-    path = [(start)]
-    # 初始化相关参数
-    result = []
-    explored = set()
-    frontier = queue.PriorityQueue()
-    # 定义起始状态，其中包括开始的位置，对应的行动方案和行动代价
-    start = ((Map.start[0],Map.start[1]), [], 0)
-    # print (start)
-    # 把起始状态放进frontier队列中，update方法会自动对其中的状态按照其行动代价进行排序
-    frontier.put(start,0)
-    # 构造循环，循环读取frontier中的状态，进行判定
-    while not frontier.empty():
-        # 获取当前节点的各项信息
-        (node, move, cost) = frontier.get()
-        # 如果弹出的节点状态满足目标要求，停止循环
-        if node == (end[0],end[1]):
-            result = move
-            
-            break
-        # 如果该节点该节点不满足目标要求，判定其是否访问过
-        if node not in explored:
-            explored.add(node)
-            # 遍历这个节点的子节点，更新frontier队列
-            for child,direction,step in getSuccessors(node):
-                newMove = move + [direction]
-                newCost = cost + step
-                newNode = (child, newMove, newCost)
-                frontier.put(newNode, newCost)
-    # 返回计算结果，即一个行动方案
-    
-    for p in result:
-        update_map_search(canvas, Map.matrix, Map.path, (cur_pos[0]+p[0],cur_pos[1]+p[1]))
-        cur_pos = (cur_pos[0]+p[0],cur_pos[1]+p[1])
-        path.append(cur_pos)
-    print("RunOutSuccessfly\n")
-    print(path)
-    return result
-
 def movement_astar():
     lab=copy.copy(Map.matrix)
     end = (Map.destination[0],Map.destination[1])
@@ -603,7 +475,18 @@ def movement_MDP():
     
 
 
+
     check_reach()
+
+def reward(ax,ay):
+    if ax==Map.destination[0] and ay==Map.destination[1] :
+        return 100
+    elif Map.matrix[ax][ay] == 0 :
+        return -1
+    elif Map.matrix[ax][ay] == -1 :
+        return float("nan") 
+
+
 
 def check_reach():
     global next_Map_flag
@@ -620,29 +503,25 @@ def _event_handler(event):
     if event.keysym in ['Left', 'Right', 'Up', 'Down', 'w', 'a', 's', 'd']:
         movement_update_handler(event)
     elif event.keysym == 'F1':
-        movement_dfs()
-    elif event.keysym == 'F2':
-        movement_bfs()
-    elif event.keysym == 'F3':
-        movement_ucs()
-    elif event.keysym == 'F4':
         movement_astar()
-    elif event.keysym == 'F5':
+    elif event.keysym == 'F2':
+        movement_MDP()
+    elif event.keysym == 'F3':
         windows.quit()
 
 if __name__ == '__main__':
     # 基础参数
 
-    cell_width = 20
-    rows = 31
-    cols = 31
+    cell_width = 120
+    rows = 5
+    cols = 5
     height = cell_width * rows
     width = cell_width * cols
 
     click_counter, total_counter, back_counter = 0, 0, 0
 
     windows = tk.Tk()
-    windows.title("PACMAN")
+    windows.title("PACMAN ENERAGYFOOD")
     windows.resizable(0, 0)
     t0 = int(time.time())
     t1 = t0
@@ -652,18 +531,17 @@ if __name__ == '__main__':
 
     filemenu = tk.Menu(menubar, tearoff=0)
     menubar.add_cascade(label='设置', menu=filemenu)
-    filemenu.add_command(label='深度优先', command=movement_dfs, accelerator='F1')
-    filemenu.add_command(label='广度优先', command=movement_bfs, accelerator='F2')
-    filemenu.add_command(label='一致代价', command=movement_ucs, accelerator='F3')
-    filemenu.add_command(label='A*', command=movement_astar, accelerator='F4')
+    filemenu.add_command(label='A*', command=movement_astar, accelerator='F1')
     filemenu.add_separator()
-    filemenu.add_command(label='退出', command=windows.quit, accelerator='F5')
+    filemenu.add_command(label='值迭代搜索', command=movement_MDP, accelerator='F2')    
+    filemenu.add_separator()
+    filemenu.add_command(label='退出', command=windows.quit, accelerator='F3')
 
     windows.config(menu=menubar)
     # end 创建菜单栏
 
     # 创建状态栏
-    label = tk.Label(windows, text="PAC Man", bd=1, anchor='w')  # anchor left align W -- WEST
+    label = tk.Label(windows, text="PAC Man Energyfood", bd=1, anchor='w')  # anchor left align W -- WEST
     label.pack(side="bottom", fill='x')
 
     canvas = tk.Canvas(windows, background="#F2F2F2", width = width, height = height)
