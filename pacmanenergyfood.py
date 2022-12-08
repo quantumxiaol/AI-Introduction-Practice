@@ -13,6 +13,9 @@ import random
 from collections import deque
 import queue
 from queue import PriorityQueue
+import numpy
+import math
+
 #                0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
 brick_matrix=   [  
                 [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
@@ -467,14 +470,44 @@ def movement_a():
     update_map(canvas, Map.matrix, Map.path, movement_list)
     check_reach()
 
+# 给定状态的Agent行为概率分布，RV
+# （状态 上移概率、下移概率、左移概率、右移概率）
+state = [   (0,0,0.5,0,0.5),(1,0,0.4,0.3,0.3),(2,0,0.5,0.5,0),
+            (3,0.3,0.3,0,0.4),(4,0.25,0.25,0.25,0.25),(5,0.3,0.3,0.4,0),
+            (6,0.5,0,0,0.5),(7,0.4,0,0.3,0.3),(8,0.5,0,0.5,0)]
+
+# 上下左右
+pacman_action = [0,1,2,3]
+
+action = []
+
+statehistroy = []
 
 def movement_MDP():
+    """
+    - State:位置
+    - Action:上下左右
+    - Reward:体力消耗
+    - Discount:r=1
+    - 每走一步消耗体力 1,记为-1
+    - 找到能量食物结束
+    - 最小体力消耗找到能量食物
+    """
+    # 上下左右移动均等，当遇到墙时，相反方向移动的概率更大。
+
     end = (Map.destination[0],Map.destination[1])
     start = (Map.start[0],Map.start[1])
     discount = 1
+
+    statehistroy.append(state(start))
+    value=[-1,-1,-1,-1,-1,-1,-1,100,-1]
+
+    # step1
     
 
 
+
+    # print("state=%d,postion=(%d,%d),reward=%f",)
 
     check_reach()
 
@@ -486,7 +519,27 @@ def reward(ax,ay):
     elif Map.matrix[ax][ay] == -1 :
         return float("nan") 
 
+def statepos(ax,ay):
+    return ay-2+3(ax-2)
 
+def actionchoice(s):
+    rand = random.random()
+    probs = [state[s][1],state[s][2],state[s][3],state[s][4]]
+
+    for slot, prob in enumerate(probs):
+            rand -= prob
+            if rand < 0.0:
+                return slot    
+
+def transmodel(s,a):
+    if a == 0:#UP
+        return s-3
+    elif a == 1:#DOWN
+        return s+3
+    elif a == 2:#LEFT
+        return s-1
+    elif a == 3:#RIGHT
+        return s+1
 
 def check_reach():
     global next_Map_flag
