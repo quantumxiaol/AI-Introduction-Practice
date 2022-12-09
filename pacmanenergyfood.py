@@ -472,16 +472,99 @@ def movement_a():
 
 # 给定状态的Agent行为概率分布，RV
 # （状态 上移概率、下移概率、左移概率、右移概率）
-state = [   (0,0,0.5,0,0.5),(1,0,0.4,0.3,0.3),(2,0,0.5,0.5,0),
+states = [   (0,0,0.5,0,0.5),(1,0,0.4,0.3,0.3),(2,0,0.5,0.5,0),
             (3,0.3,0.3,0,0.4),(4,0.25,0.25,0.25,0.25),(5,0.3,0.3,0.4,0),
             (6,0.5,0,0,0.5),(7,0.4,0,0.3,0.3),(8,0.5,0,0.5,0)]
 
-# 上下左右
-pacman_action = [0,1,2,3]
+# 参数
+REWARD = -1 # constant reward for non-terminal states
+DISCOUNT = 1
+MAX_ERROR = 10**(-3)
 
-action = []
 
-statehistroy = []
+NUM_ACTIONS = 4
+ACTIONS = [(1, 0), (0, -1), (-1, 0), (0, 1)] # Down, Left, Up, Right
+NUM_ROW = 3
+NUM_COL = 3
+U = [   [0, 0, 0],
+        [0, 0, 0],
+        [0, 1, 0]]
+
+def printEnvironment(arr, policy=False):
+    res = ""
+    for r in range(NUM_ROW):
+        res += "|"
+        for c in range(NUM_COL):
+            # if r == c == 1:
+            #     val = "WALL"
+
+            if r == 2 and c == 1:
+                val = "+1"
+
+            else:
+                if policy:
+                    val = ["Down", "Left", "Up", "Right"][arr[r][c]]
+                else:
+                    val = str(arr[r][c])
+            res += " " + val[:5].ljust(5) + " |" # format
+        res += "\n"
+    print(res)
+
+# 获得通过从给定状态执行给定动作所达到的状态的效用
+def getU(U, r, c, action):
+    dr, dc = ACTIONS[action]
+    newR, newC = r+dr, c+dc
+
+    if newR < 0 or newC < 0 or newR >= NUM_ROW or newC >= NUM_COL : # boundary or the wallor (newR == newC == 1)
+        return U[r][c]
+    else:
+        return U[newR][newC]
+
+# 计算给定动作状态的效用
+def calculateU(U, r, c, action):
+    u = REWARD
+    u += 0.1 * DISCOUNT * getU(U, r, c, (action-1)%4)
+    u += 0.8 * DISCOUNT * getU(U, r, c, action)
+    u += 0.1 * DISCOUNT * getU(U, r, c, (action+1)%4)
+    return u
+
+def valueIteration(U):
+    print("值迭代:\n")
+    while True:
+        nextU =[[0, 0, 0],
+                [0, 0, 0],
+                [0, 1, 0]]
+        error = 0
+        for r in range(NUM_ROW):
+            for c in range(NUM_COL):
+                # 到达食物
+                if (r == 2 and c == 1) :#or (r == c == 1)
+                    continue
+                nextU[r][c] = max([calculateU(U, r, c, action) for action in range(NUM_ACTIONS)]) # Bellman update
+                error = max(error, abs(nextU[r][c]-U[r][c]))
+        U = nextU
+        printEnvironment(U)
+        if error < MAX_ERROR :#* (1-DISCOUNT) / DISCOUNT:
+            break
+    return U
+
+# 从U得到最优策略
+def getOptimalPolicy(U):
+    policy = [[-1, -1, -1, -1] for i in range(NUM_ROW)]
+    for r in range(NUM_ROW):
+        for c in range(NUM_COL):
+            # if (r <= 1 and c == 3) :#or (r == c == 1):
+            #     continue
+            # 选择使效用最大化的行动
+            maxAction, maxU = None, -float("inf")
+            for action in range(NUM_ACTIONS):
+                u = calculateU(U, r, c, action)
+                if u > maxU:
+                    maxAction, maxU = action, u
+            policy[r][c] = maxAction
+    return policy
+
+
 
 def movement_MDP():
     """
@@ -497,17 +580,32 @@ def movement_MDP():
 
     end = (Map.destination[0],Map.destination[1])
     start = (Map.start[0],Map.start[1])
-    discount = 1
+    discount = DISCOUNT
+    global U
 
-    statehistroy.append(state(start))
-    value=[-1,-1,-1,-1,-1,-1,-1,100,-1]
+    cur_pos = start
 
-    # step1
-    
+    print("初始值:\n")
+    printEnvironment(U)
 
+    # 值迭代
+    U = valueIteration(U)
 
+    # 从U中得到最优策略并打印出来
+    policy = getOptimalPolicy(U)
+    print("最优策略:\n")
+    printEnvironment(policy, True)
 
-    # print("state=%d,postion=(%d,%d),reward=%f",)
+    print("RunOutSuccessfly\n")
+    for p in policy:
+        if cur_pos != end:
+            cur_pos = (cur_pos[0] + ACTIONS[policy[cur_pos[0]-1][cur_pos[1]-1]][0],cur_pos[1] + ACTIONS[policy[cur_pos[0]-1][cur_pos[1]-1]][1])
+            update_map_search(canvas, Map.matrix, Map.path, (cur_pos[0],cur_pos[1]))
+
+        else:
+            break
+    print("RunOutSuccessfly\n")
+
 
     check_reach()
 
@@ -519,12 +617,18 @@ def reward(ax,ay):
     elif Map.matrix[ax][ay] == -1 :
         return float("nan") 
 
+def reward(s):
+    if s == 7:
+        return 100
+    else:
+        return -1
+
 def statepos(ax,ay):
-    return ay-2+3(ax-2)
+    return ay-2+3*(ax-2)
 
 def actionchoice(s):
     rand = random.random()
-    probs = [state[s][1],state[s][2],state[s][3],state[s][4]]
+    probs = [states[s][1],states[s][2],states[s][3],states[s][4]]
 
     for slot, prob in enumerate(probs):
             rand -= prob
