@@ -490,7 +490,7 @@ U = [   [0, 0, 0],
         [0, 0, 0],
         [0, 1, 0]]
 
-def printEnvironment(arr, policy=False):
+def printEP(arr, policy=False):
     res = ""
     for r in range(NUM_ROW):
         res += "|"
@@ -543,7 +543,7 @@ def valueIteration(U):
                 nextU[r][c] = max([calculateU(U, r, c, action) for action in range(NUM_ACTIONS)]) # Bellman update
                 error = max(error, abs(nextU[r][c]-U[r][c]))
         U = nextU
-        printEnvironment(U)
+        printEP(U)
         if error < MAX_ERROR :#* (1-DISCOUNT) / DISCOUNT:
             break
     return U
@@ -586,7 +586,7 @@ def movement_MDP():
     cur_pos = start
 
     print("初始值:\n")
-    printEnvironment(U)
+    printEP(U)
 
     # 值迭代
     U = valueIteration(U)
@@ -594,7 +594,7 @@ def movement_MDP():
     # 从U中得到最优策略并打印出来
     policy = getOptimalPolicy(U)
     print("最优策略:\n")
-    printEnvironment(policy, True)
+    printEP(policy, True)
 
     print("RunOutSuccessfly\n")
     for p in policy:
