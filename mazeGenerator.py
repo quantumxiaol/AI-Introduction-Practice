@@ -1,7 +1,3 @@
-
-
-import tkinter as tk
-
 import numpy as np
 import time
 import random
@@ -80,6 +76,9 @@ class Maze(object):
 		self.matrix = -np.ones((self.height, self.width))
 		self.matrix[self.start[0], self.start[1]] = 0
 		self.matrix[self.destination[0], self.destination[1]] = 0
+		# 确保起点和终点与迷宫内部连通
+		self.matrix[self.start[0], self.start[1] + 1] = 0  # 起点连接到内部
+		self.matrix[self.destination[0], self.destination[1] - 1] = 0  # 终点连接到内部
 
 		visit_flag = [[0 for i in range(self.width)] for j in range(self.height)]
 
@@ -140,6 +139,9 @@ class Maze(object):
 
 		self.matrix[self.start[0], self.start[1]] = 0
 		self.matrix[self.destination[0], self.destination[1]] = 0
+		# 确保起点和终点与迷宫内部连通
+		self.matrix[self.start[0], self.start[1] + 1] = 0  # 起点连接到内部
+		self.matrix[self.destination[0], self.destination[1] - 1] = 0  # 终点连接到内部
 
 	def generate_matrix_split(self):
 		# 地图初始化，并将出口和入口处的值设置为0
@@ -192,10 +194,12 @@ class Maze(object):
 			split(cur_row + 2, lc + 2, rr - 2, cur_col - 2)
 			split(cur_row + 2, cur_col + 2, rr - 2, rc - 2) 
 
-			self.matrix[self.start[0], self.start[1]] = 0
-			self.matrix[self.destination[0], self.destination[1]] = 0
-
 		split(0, 0, self.height - 1, self.width - 1)
+		# 在递归完成后设置起点和终点，确保它们与迷宫内部连通
+		self.matrix[self.start[0], self.start[1]] = 0
+		self.matrix[self.destination[0], self.destination[1]] = 0
+		self.matrix[self.start[0], self.start[1] + 1] = 0  # 起点连接到内部
+		self.matrix[self.destination[0], self.destination[1] - 1] = 0  # 终点连接到内部
 
 	# 最小生成树算法-kruskal（选边法）思想生成迷宫地图，这种实现方法最复杂。
 	def generate_matrix_kruskal(self):
@@ -245,6 +249,9 @@ class Maze(object):
 
 		self.matrix[self.start[0], self.start[1]] = 0
 		self.matrix[self.destination[0], self.destination[1]] = 0
+		# 确保起点和终点与迷宫内部连通
+		self.matrix[self.start[0], self.start[1] + 1] = 0  # 起点连接到内部
+		self.matrix[self.destination[0], self.destination[1] - 1] = 0  # 终点连接到内部
 
 	# 迷宫寻路算法dfs
 	def find_path_dfs(self, destination):
