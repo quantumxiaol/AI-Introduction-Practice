@@ -14,19 +14,25 @@ from search_algorithms import movement_astar
 from mdp_algorithm import movement_mdp
 
 
-def generate_matrix():
+def generate_matrix(mode=None):
     """生成地图矩阵"""
     global movement_list
     global click_counter, back_counter
     global visited_paths, final_path
+    global map_generate_mode
 
     click_counter, back_counter = 0, 0
     movement_list = [Map.start]  # 重置移动列表
     Map.path = []  # 清空路径
     visited_paths = set()  # 清空已访问路径
     final_path = []  # 清空最终路径
+    
+    # 如果指定了模式，更新全局模式
+    if mode is not None:
+        map_generate_mode = mode
+    
     # 重新生成地图
-    Map.generate_matrix(None)
+    Map.generate_matrix(map_generate_mode)
     # 确保起点和终点正确设置（覆盖任何之前的修改）
     Map.matrix[Map.start[0]][Map.start[1]] = 1
     Map.matrix[Map.destination[0]][Map.destination[1]] = 2
@@ -112,7 +118,17 @@ class PacmanEnergyfoodWindow(QMainWindow):
         mdp_action = filemenu.addAction('值迭代搜索', lambda: movement_mdp(scene, Map, cell_width, rows, cols))
         mdp_action.setShortcut('F2')
         filemenu.addSeparator()
-        restart_action = filemenu.addAction('重新开始', generate_matrix)
+        
+        # 地图生成菜单
+        mapmenu = filemenu.addMenu('地图生成')
+        mapmenu.addAction('预设地图', lambda: generate_matrix('brick'))
+        mapmenu.addAction('DFS算法', lambda: generate_matrix('dfs'))
+        mapmenu.addAction('Prim算法', lambda: generate_matrix('prim'))
+        mapmenu.addAction('Kruskal算法', lambda: generate_matrix('kruskal'))
+        mapmenu.addAction('递归分割', lambda: generate_matrix('split'))
+        
+        filemenu.addSeparator()
+        restart_action = filemenu.addAction('重新开始', lambda: generate_matrix())
         restart_action.setShortcut('F9')
         filemenu.addSeparator()
         exit_action = filemenu.addAction('退出', self.close)
@@ -181,6 +197,7 @@ if __name__ == '__main__':
     movement_list = []
     visited_paths = set()
     final_path = []
+    map_generate_mode = 'brick'  # 默认使用预设地图
     
     t0 = int(time.time())
     t1 = t0

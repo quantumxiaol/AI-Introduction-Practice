@@ -234,12 +234,22 @@ def movement_astar(scene, map_obj, cell_width, rows, cols):
     visited = {}
     visited_set = set()
 
-    while fringe:
+    max_iterations = height * width * 10  # 防止无限循环
+    iteration_count = 0
+    
+    while fringe and iteration_count < max_iterations:
+        iteration_count += 1
         # get first state (least cost)
         state = fringe.pop(0)
         # goal check
         (i, j) = state[0]
+        
+        # 如果已经访问过且代价更高，跳过
+        if (i, j) in visited and visited[(i, j)] <= state[2]:
+            continue
+            
         visited_set.add((i, j))
+        visited[(i, j)] = state[2]
         
         if (i, j) == end:
             path = [state[0]] + state[1]
@@ -255,9 +265,6 @@ def movement_astar(scene, map_obj, cell_width, rows, cols):
                 QApplication.processEvents()
             return path
 
-        # set the cost (path is enough since the heuristic won't change)
-        visited[(i, j)] = state[2]
-
         # explore neighbor
         neighbor = list()
         if i > 0 and lab[i-1][j] >= 0:
@@ -270,9 +277,18 @@ def movement_astar(scene, map_obj, cell_width, rows, cols):
             neighbor.append((i, j+1))
 
         for n in neighbor:
-            next_cost = state[2] + 1
-            if n in visited and visited[n] >= next_cost:
+            # 跳过已访问的节点（除非找到更优路径）
+            if n in visited_set:
                 continue
+                
+            next_cost = state[2] + 1
+            # 如果已经访问过且代价更高或相等，跳过
+            if n in visited and visited[n] <= next_cost:
+                continue
+                
+            # 检查fringe中是否已有该节点，如果有且代价更高，移除它
+            fringe = [s for s in fringe if s[0] != n or s[2] < next_cost]
+            
             fringe.append((n, [state[0]] + state[1], next_cost, heuristic(n[0], n[1])))
 
         # resort the list (SHOULD use a priority queue here to avoid re-sorting all the time)

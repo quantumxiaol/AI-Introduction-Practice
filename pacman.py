@@ -14,33 +14,48 @@ from draw_utils import draw_map, update_map, update_map_search
 from search_algorithms import movement_dfs, movement_bfs, movement_ucs, movement_astar
 
 
-def generate_matrix():
+def generate_matrix(mode=None):
     """生成地图矩阵"""
     global movement_list
     global click_counter, back_counter
     global visited_paths, final_path
+    global map_generate_mode
 
     click_counter, back_counter = 0, 0
     movement_list = [Map.start]  # 重置移动列表
     Map.path = []  # 清空路径
     visited_paths = set()  # 清空已访问路径
     final_path = []  # 清空最终路径
+    
+    # 如果指定了模式，更新全局模式
+    if mode is not None:
+        map_generate_mode = mode
+    
     # 重新生成地图
-    Map.generate_matrix(None)
+    Map.generate_matrix(map_generate_mode)
     # 确保起点和终点正确设置（覆盖任何之前的修改）
     Map.matrix[Map.start[0]][Map.start[1]] = 1
     Map.matrix[Map.destination[0]][Map.destination[1]] = 2
-    # 确保地图中其他位置没有被标记为已访问
+    # 清理搜索标记（-2, -3, -4, -5等）
     for r in range(Map.height):
         for c in range(Map.width):
-            if Map.matrix[r][c] == -2 or Map.matrix[r][c] == -3:
+            if Map.matrix[r][c] in [-2, -3, -4, -5]:
                 # 恢复被标记为已访问或搜索中的位置
                 if (r, c) != (Map.start[0], Map.start[1]) and (r, c) != (Map.destination[0], Map.destination[1]):
-                    # 检查原始地图中这个位置应该是什么
-                    from map_utils import BRICK_MATRIX_31
-                    if BRICK_MATRIX_31[r][c] == -1:
-                        Map.matrix[r][c] = -1
+                    # 根据地图模式决定恢复方式
+                    if map_generate_mode == 'brick':
+                        # 预设地图模式，使用原始砖块地图
+                        from map_utils import BRICK_MATRIX_31, BRICK_MATRIX_5
+                        if Map.height == 5:
+                            original_matrix = BRICK_MATRIX_5
+                        else:
+                            original_matrix = BRICK_MATRIX_31
+                        if original_matrix[r][c] == -1:
+                            Map.matrix[r][c] = -1
+                        else:
+                            Map.matrix[r][c] = 0
                     else:
+                        # 随机地图模式，恢复为空地
                         Map.matrix[r][c] = 0
     # 再次确保起点和终点正确
     Map.matrix[Map.start[0]][Map.start[1]] = 1
@@ -132,9 +147,19 @@ class PacmanWindow(QMainWindow):
         astar_action = filemenu.addAction('A*', lambda: movement_astar(scene, Map, cell_width, rows, cols))
         astar_action.setShortcut('F4')
         filemenu.addSeparator()
+        
+        # 地图生成菜单
+        mapmenu = filemenu.addMenu('地图生成')
+        mapmenu.addAction('预设地图', lambda: generate_matrix('brick'))
+        mapmenu.addAction('DFS算法', lambda: generate_matrix('dfs'))
+        mapmenu.addAction('Prim算法', lambda: generate_matrix('prim'))
+        mapmenu.addAction('Kruskal算法', lambda: generate_matrix('kruskal'))
+        mapmenu.addAction('递归分割', lambda: generate_matrix('split'))
+        
+        filemenu.addSeparator()
         exit_action = filemenu.addAction('退出', self.close)
         exit_action.setShortcut('F5')
-        restart_action = filemenu.addAction('重新开始', generate_matrix)
+        restart_action = filemenu.addAction('重新开始', lambda: generate_matrix())
         restart_action.setShortcut('F9')
         
         # 创建场景和视图
@@ -200,6 +225,7 @@ if __name__ == '__main__':
     next_Map_flag = False
     visited_paths = set()
     final_path = []
+    map_generate_mode = 'brick'  # 默认使用预设地图
     
     t0 = int(time.time())
     t1 = t0
