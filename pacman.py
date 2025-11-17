@@ -1,6 +1,8 @@
-import tkinter as tk
-from tkinter.messagebox import showinfo
-from tkinter import filedialog
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QGraphicsView, 
+                              QGraphicsScene, QGraphicsRectItem, QGraphicsEllipseItem,
+                              QGraphicsTextItem, QLabel, QMenuBar, QMenu, QMessageBox)
+from PyQt6.QtCore import Qt, QRectF, QPointF
+from PyQt6.QtGui import QColor, QPen, QBrush, QKeyEvent
 import pandas as pd
 import numpy as np
 from PIL import Image
@@ -13,6 +15,7 @@ import random
 from collections import deque
 import queue
 from queue import PriorityQueue
+
 #                0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
 brick_matrix=   [  
                 [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],
@@ -67,6 +70,7 @@ class UnionSet(object):
 
 class Map:
     def __init__(self, width = 31, height = 31):
+
         assert width >= 5 and height >= 5, "Length of width or height must be larger than 5."
         self.width = (width // 2) * 2 + 1
         self.height = (height // 2) * 2 + 1
@@ -168,22 +172,37 @@ class Map:
 
         dfs([[self.start[0], self.start[1]]])    
 
-def draw_pacman(canvas, row, col,color='#B0E0E6'):
+# 保存类引用，避免被全局变量覆盖
+_MapClass = Map
+
+def draw_pacman(scene, row, col, color='#B0E0E6'):
     x0, y0 = col * cell_width, row * cell_width
     x1, y1 = x0 + cell_width, y0 + cell_width
-    canvas.create_arc(x0, y0, x1, y1,start = 30, extent = 300, fill = color,outline ='yellow',width = 0)
+    # PyQt6 使用 QGraphicsEllipseItem 绘制扇形（通过设置起始角度和跨度）
+    ellipse = QGraphicsEllipseItem(x0, y0, cell_width, cell_width)
+    ellipse.setStartAngle(30 * 16)  # PyQt6 使用 1/16 度为单位
+    ellipse.setSpanAngle(300 * 16)
+    ellipse.setBrush(QBrush(QColor(color)))
+    ellipse.setPen(QPen(QColor('yellow'), 0))
+    scene.addItem(ellipse)
 
-def draw_cell(canvas, row, col, color="#F2F2F2"):
+def draw_cell(scene, row, col, color="#F2F2F2"):
     x0, y0 = col * cell_width, row * cell_width
     x1, y1 = x0 + cell_width, y0 + cell_width
-    canvas.create_rectangle(x0, y0, x1, y1, fill = color, outline =color, width = 0)
+    rect = QGraphicsRectItem(x0, y0, cell_width, cell_width)
+    rect.setBrush(QBrush(QColor(color)))
+    rect.setPen(QPen(QColor(color), 0))
+    scene.addItem(rect)
 
-def draw_food(canvas, row, col, color="#EE3F4D"):
+def draw_food(scene, row, col, color="#EE3F4D"):
     x0, y0 = col * cell_width, row * cell_width
     x1, y1 = x0 + cell_width, y0 + cell_width
-    canvas.create_rectangle(x0, y0, x1, y1, fill = color, outline =color, width = 0)
+    rect = QGraphicsRectItem(x0, y0, cell_width, cell_width)
+    rect.setBrush(QBrush(QColor(color)))
+    rect.setPen(QPen(QColor(color), 0))
+    scene.addItem(rect)
 
-def draw_path(canvas, matrix, row, col, color, line_color):
+def draw_path(scene, matrix, row, col, color, line_color):
     # 列
     if row + 1 < rows and matrix[row - 1][col] >= 1 and matrix[row + 1][col] >= 1:
         x0, y0 = col * cell_width + 2 * cell_width / 5, row * cell_width
@@ -196,36 +215,51 @@ def draw_path(canvas, matrix, row, col, color, line_color):
     elif col + 1 < cols and row + 1 < rows and matrix[row][col + 1] >= 1 and matrix[row + 1][col] >= 1:
         x0, y0 = col * cell_width + 2 * cell_width / 5, row * cell_width + 2 * cell_width / 5
         x1, y1 = x0 + 3 * cell_width / 5, y0 + cell_width / 5
-        canvas.create_rectangle(x0, y0, x1, y1, fill = color, outline = line_color, width = 0)
+        rect = QGraphicsRectItem(x0, y0, x1 - x0, y1 - y0)
+        rect.setBrush(QBrush(QColor(color)))
+        rect.setPen(QPen(QColor(line_color), 0))
+        scene.addItem(rect)
         x0, y0 = col * cell_width + 2 * cell_width / 5, row * cell_width + 2 * cell_width / 5
         x1, y1 = x0 + cell_width / 5, y0 + 3 * cell_width / 5
     # 右上角
     elif row + 1 < rows and matrix[row][col - 1] >= 1 and matrix[row + 1][col] >= 1:
         x0, y0 = col * cell_width, row * cell_width + 2 * cell_width / 5
         x1, y1 = x0 + 3 * cell_width / 5, y0 + cell_width / 5
-        canvas.create_rectangle(x0, y0, x1, y1, fill = color, outline = line_color, width = 0)
+        rect = QGraphicsRectItem(x0, y0, x1 - x0, y1 - y0)
+        rect.setBrush(QBrush(QColor(color)))
+        rect.setPen(QPen(QColor(line_color), 0))
+        scene.addItem(rect)
         x0, y0 = col * cell_width + 2 * cell_width / 5, row * cell_width + 2 * cell_width / 5
         x1, y1 = x0 + cell_width / 5, y0 + 3 * cell_width / 5
     # 左下角
     elif col + 1 < cols and matrix[row - 1][col] >= 1 and matrix[row][col + 1] >= 1:
         x0, y0 = col * cell_width + 2 * cell_width / 5, row * cell_width
         x1, y1 = x0 + cell_width / 5, y0 + 3 * cell_width / 5
-        canvas.create_rectangle(x0, y0, x1, y1, fill = color, outline = line_color, width = 0)
+        rect = QGraphicsRectItem(x0, y0, x1 - x0, y1 - y0)
+        rect.setBrush(QBrush(QColor(color)))
+        rect.setPen(QPen(QColor(line_color), 0))
+        scene.addItem(rect)
         x0, y0 = col * cell_width + 2 * cell_width / 5, row * cell_width + 2 * cell_width / 5
         x1, y1 = x0 + 3 * cell_width / 5, y0 + cell_width / 5
     # 右下角
     elif matrix[row - 1][col] >= 1 and matrix[row][col - 1] >= 1:
         x0, y0 = col * cell_width, row * cell_width + 2 * cell_width / 5
         x1, y1 = x0 + 3 * cell_width / 5, y0 + cell_width / 5
-        canvas.create_rectangle(x0, y0, x1, y1, fill = color, outline = line_color, width = 0)
+        rect = QGraphicsRectItem(x0, y0, x1 - x0, y1 - y0)
+        rect.setBrush(QBrush(QColor(color)))
+        rect.setPen(QPen(QColor(line_color), 0))
+        scene.addItem(rect)
         x0, y0 = col * cell_width + 2 * cell_width / 5, row * cell_width
         x1, y1 = x0 + cell_width / 5, y0 + 3 * cell_width / 5
     else:
         x0, y0 = col * cell_width + 2 * cell_width / 5, row * cell_width + 2 * cell_width / 5
         x1, y1 = x0 + cell_width / 5, y0 + cell_width / 5
-    canvas.create_rectangle(x0, y0, x1, y1, fill = color, outline = line_color, width = 0)
+    rect = QGraphicsRectItem(x0, y0, x1 - x0, y1 - y0)
+    rect.setBrush(QBrush(QColor(color)))
+    rect.setPen(QPen(QColor(line_color), 0))
+    scene.addItem(rect)
 
-def draw_map(canvas, matrix, path, moves):
+def draw_map(scene, matrix, path, moves):
     """
     根据matrix中每个位置的值绘图
     -1: 墙壁
@@ -235,7 +269,7 @@ def draw_map(canvas, matrix, path, moves):
     3 : ghost
     """
 
-    canvas.delete("all")
+    scene.clear()
     matrix = copy.copy(matrix)
     
     # for p in path:
@@ -245,21 +279,21 @@ def draw_map(canvas, matrix, path, moves):
     for r in range(rows):
         for c in range(cols):
             if matrix[r][c] == 0:
-                draw_cell(canvas, r, c)
+                draw_cell(scene, r, c)
             elif matrix[r][c] == -1:
-                draw_cell(canvas, r, c, '#525288')
+                draw_cell(scene, r, c, '#525288')
             elif matrix[r][c] == 1:
 
-                # draw_cell(canvas, r, c)
-                draw_pacman(canvas,r,c)
-                # draw_path(canvas, matrix, r, c, '#bc84a8', '#bc84a8')
+                # draw_cell(scene, r, c)
+                draw_pacman(scene,r,c)
+                # draw_path(scene, matrix, r, c, '#bc84a8', '#bc84a8')
             elif matrix[r][c] == 2:
-                draw_food(canvas, r, c)
+                draw_food(scene, r, c)
                 # draw_path(canvas, matrix, r, c, '#ee3f4d', '#ee3f4d')
 
-def update_map(canvas, matrix, path, moves):
+def update_map(scene, matrix, path, moves):
     
-    canvas.delete("all")
+    scene.clear()
     matrix = copy.copy(matrix)
     # for p in path:
     #     matrix[p[0]][p[1]] = 1
@@ -282,15 +316,15 @@ def update_map(canvas, matrix, path, moves):
             #     color = colors[6:8]
 
             if matrix[r][c] == 0:
-                draw_cell(canvas, r, c, colors[1])
+                draw_cell(scene, r, c, colors[1])
             elif matrix[r][c] == -1:
-                draw_cell(canvas, r, c, colors[0])
+                draw_cell(scene, r, c, colors[0])
             elif matrix[r][c] == 1:
-                draw_pacman(canvas,r,c)
-                # draw_cell(canvas, r, c, colors[1])
-                # draw_path(canvas, matrix, r, c, '#bc84a8', '#bc84a8')
+                draw_pacman(scene,r,c)
+                # draw_cell(scene, r, c, colors[1])
+                # draw_path(scene, matrix, r, c, '#bc84a8', '#bc84a8')
             elif matrix[r][c] == 2:
-                draw_food(canvas, r, c)
+                draw_food(scene, r, c)
                 # draw_cell(canvas, r, c, colors[1])
                 # draw_path(canvas, matrix, r, c, '#ee3f4d', '#ee3f4d')
     
@@ -298,38 +332,96 @@ def update_map(canvas, matrix, path, moves):
 def generate_matrix():
     global movement_list
     global click_counter, back_counter
+    global visited_paths, final_path
 
     click_counter, back_counter = 0, 0
-    movement_list = [Map.start]
+    movement_list = [Map.start]  # 重置移动列表
+    Map.path = []  # 清空路径
+    visited_paths = set()  # 清空已访问路径
+    final_path = []  # 清空最终路径
+    # 重新生成地图
     Map.generate_matrix(None)
-    draw_map(canvas, Map.matrix, Map.path, movement_list)
+    # 确保起点和终点正确设置（覆盖任何之前的修改）
+    Map.matrix[Map.start[0]][Map.start[1]] = 1
+    Map.matrix[Map.destination[0]][Map.destination[1]] = 2
+    # 确保地图中其他位置没有被标记为已访问
+    for r in range(Map.height):
+        for c in range(Map.width):
+            if Map.matrix[r][c] == -2 or Map.matrix[r][c] == -3:
+                # 恢复被标记为已访问或搜索中的位置
+                if (r, c) != (Map.start[0], Map.start[1]) and (r, c) != (Map.destination[0], Map.destination[1]):
+                    # 检查原始地图中这个位置应该是什么
+                    if brick_matrix[r][c] == -1:
+                        Map.matrix[r][c] = -1
+                    else:
+                        Map.matrix[r][c] = 0
+    # 再次确保起点和终点正确
+    Map.matrix[Map.start[0]][Map.start[1]] = 1
+    Map.matrix[Map.destination[0]][Map.destination[1]] = 2
+    draw_map(scene, Map.matrix, Map.path, movement_list)
 
-def update_map_search(canvas, matrix, path, moves):
+# 全局变量存储已访问的路径和最终路径
+visited_paths = set()
+final_path = []
+
+def update_map_search(scene, matrix, path, moves, visited=None, final_path_points=None):
+    """更新地图显示，高亮当前搜索位置和路径"""
+    global visited_paths, final_path
     
-    canvas.delete("all")
-    matrix = copy.copy(matrix)
-    # for p in path:
-    #     matrix[p[0]][p[1]] = 1
-    matrix[moves[0]][moves[1]] = -3
+    scene.clear()
+    # 使用原始地图的深拷贝，避免修改原始地图
+    display_matrix = copy.deepcopy(Map.matrix)
+    
+    # 更新已访问路径
+    if visited:
+        visited_paths.update(visited)
+    if final_path_points:
+        final_path = final_path_points.copy()
+    
+    # 标记已访问的路径（用浅蓝色）
+    for pos in visited_paths:
+        if isinstance(pos, tuple) and len(pos) == 2:
+            r, c = pos
+            if (r, c) != (Map.start[0], Map.start[1]) and (r, c) != (Map.destination[0], Map.destination[1]):
+                display_matrix[r][c] = -4  # 已访问标记
+    
+    # 标记最终路径（用绿色）
+    for pos in final_path:
+        if isinstance(pos, tuple) and len(pos) == 2:
+            r, c = pos
+            if (r, c) != (Map.start[0], Map.start[1]) and (r, c) != (Map.destination[0], Map.destination[1]):
+                display_matrix[r][c] = -5  # 最终路径标记
+    
+    # 标记当前搜索位置
+    if isinstance(moves, tuple) and len(moves) == 2:
+        display_matrix[moves[0]][moves[1]] = -3
+    
+    # 显示起点和终点（确保它们始终显示）
+    display_matrix[Map.start[0]][Map.start[1]] = 1
+    display_matrix[Map.destination[0]][Map.destination[1]] = 2
 
-    row, col = movement_list[-1]
+    # 使用起点作为默认位置，不依赖 movement_list
+    row, col = Map.start
     colors = ['#525288', '#F2F2F2', '#525288', '#F2F2F2', '#525288', '#F2F2F2', '#525288', '#F2F2F2']
     
     for r in range(rows):
         for c in range(cols):
-
-            if matrix[r][c] == 0:
-                draw_cell(canvas, r, c, colors[1])
-            elif matrix[r][c] == -1:
-                draw_cell(canvas, r, c, colors[0])
-            elif matrix[r][c] == -2:
-                draw_cell(canvas, r, c, colors[1])#"#525266")                
-            elif matrix[r][c] == 1:
-                draw_pacman(canvas,r,c)
-            elif matrix[r][c] == 2:
-                draw_food(canvas, r, c)
-            elif matrix[r][c] == -3:
-                draw_cell(canvas, r, c, "#525266")
+            if display_matrix[r][c] == 0:
+                draw_cell(scene, r, c, colors[1])
+            elif display_matrix[r][c] == -1:
+                draw_cell(scene, r, c, colors[0])
+            elif display_matrix[r][c] == -2:
+                draw_cell(scene, r, c, "#CCCCCC")  # 已访问过的路径用浅灰色
+            elif display_matrix[r][c] == -4:
+                draw_cell(scene, r, c, "#ADD8E6")  # 已访问路径用浅蓝色
+            elif display_matrix[r][c] == -5:
+                draw_cell(scene, r, c, "#90EE90")  # 最终路径用浅绿色
+            elif display_matrix[r][c] == 1:
+                draw_pacman(scene, r, c)
+            elif display_matrix[r][c] == 2:
+                draw_food(scene, r, c)
+            elif display_matrix[r][c] == -3:
+                draw_cell(scene, r, c, "#FFD700")  # 当前搜索位置用金色高亮
     # windows.after(500,update_map_search(canvas, matrix, path, moves))
     # time.sleep(0.1)
     # print("called\n")
@@ -368,7 +460,7 @@ def movement_update_handler(event):
     # Map.matrix[cur_pos[0]][cur_pos[1]]=0
     # Map.matrix[cur_pos[0]+ops[event.keysym][0]][cur_pos[1]+ops[event.keysym][1]]=1
 
-    update_map(canvas, Map.matrix, Map.path, movement_list)
+    update_map(scene, Map.matrix, Map.path, movement_list)
     check_reach()
 
 dirs = [
@@ -380,29 +472,37 @@ dirs = [
 
 def getSuccessors(cur_pos):
     able=[]
-    if Map.matrix[cur_pos[0]-1][cur_pos[1]] == 0 or Map.matrix[cur_pos[0]-1][cur_pos[1]] == 2:
-        able.append(((cur_pos[0]-1,cur_pos[1]),[-1,0],1))
-
-    # 下方
-    if Map.matrix[cur_pos[0]+1][cur_pos[1]] == 0 or Map.matrix[cur_pos[0]+1][cur_pos[1]] == 2:
-        able.append(((cur_pos[0]+1,cur_pos[1]),[1,0],1))       
-    # 左方
-    if Map.matrix[cur_pos[0]][cur_pos[1]-1] == 0 or Map.matrix[cur_pos[0]][cur_pos[1]-1] == 2:
-        able.append(((cur_pos[0],cur_pos[1]-1),[0,-1],1))
-        
-    # 右方
-    if Map.matrix[cur_pos[0]][cur_pos[1]+1] == 0 or Map.matrix[cur_pos[0]][cur_pos[1]+1] == 2:
-        able.append(((cur_pos[0],cur_pos[1]+1),[0,1],1))
+    row, col = cur_pos[0], cur_pos[1]
+    # 上方 - 检查边界
+    if row > 0 and (Map.matrix[row-1][col] == 0 or Map.matrix[row-1][col] == 2):
+        able.append(((row-1, col),[-1,0],1))
+    # 下方 - 检查边界
+    if row < Map.height - 1 and (Map.matrix[row+1][col] == 0 or Map.matrix[row+1][col] == 2):
+        able.append(((row+1, col),[1,0],1))       
+    # 左方 - 检查边界
+    if col > 0 and (Map.matrix[row][col-1] == 0 or Map.matrix[row][col-1] == 2):
+        able.append(((row, col-1),[0,-1],1))
+    # 右方 - 检查边界
+    if col < Map.width - 1 and (Map.matrix[row][col+1] == 0 or Map.matrix[row][col+1] == 2):
+        able.append(((row, col+1),[0,1],1))
     return able
 
 
 def movement_dfs():
     global movement_list
     global click_counter, back_counter
+    global visited_paths, final_path
 
+    # 清空之前的路径记录
+    visited_paths = set()
+    final_path = []
+    
+    # 使用地图副本进行搜索，避免修改原始地图
+    search_matrix = copy.deepcopy(Map.matrix)
     end = (Map.destination[0],Map.destination[1])
     start = (Map.start[0],Map.start[1])
     path_list = [start]
+    visited_set = set()  # 记录已访问的节点
 
     # path_list=[cur_pos]
     while path_list:
@@ -410,53 +510,68 @@ def movement_dfs():
         if cur_pos == end:
             print(path_list)
             print("RunOutSuccessfly\n")
+            final_path = path_list.copy()  # 保存最终路径
             break
         row , col = cur_pos
         # 已经走过
-        Map.matrix[row][col] = -2
-        # 上方
-        if Map.matrix[cur_pos[0]-1][cur_pos[1]] == 0 or Map.matrix[cur_pos[0]-1][cur_pos[1]] == 2:
-            path_list.append((cur_pos[0]-1,cur_pos[1]))
-            Map.matrix[cur_pos[0]-1][cur_pos[1]] = 1
+        search_matrix[row][col] = -2
+        visited_set.add(cur_pos)  # 记录已访问
+        # 上方 - 检查边界
+        if row > 0 and (search_matrix[row-1][col] == 0 or search_matrix[row-1][col] == 2):
+            path_list.append((row-1, col))
+            search_matrix[row-1][col] = 1
             continue
-        # 下方
-        elif Map.matrix[cur_pos[0]+1][cur_pos[1]] == 0 or Map.matrix[cur_pos[0]+1][cur_pos[1]] == 2:
-            path_list.append((cur_pos[0]+1,cur_pos[1]))
-            Map.matrix[cur_pos[0]+1][cur_pos[1]] = 1
+        # 下方 - 检查边界
+        elif row < Map.height - 1 and (search_matrix[row+1][col] == 0 or search_matrix[row+1][col] == 2):
+            path_list.append((row+1, col))
+            search_matrix[row+1][col] = 1
             continue        
-        # 左方
-        elif Map.matrix[cur_pos[0]][cur_pos[1]-1] == 0 or Map.matrix[cur_pos[0]][cur_pos[1]-1] == 2:
-            path_list.append((cur_pos[0],cur_pos[1]-1))
-            Map.matrix[cur_pos[0]][cur_pos[1]-1] = 1
+        # 左方 - 检查边界
+        elif col > 0 and (search_matrix[row][col-1] == 0 or search_matrix[row][col-1] == 2):
+            path_list.append((row, col-1))
+            search_matrix[row][col-1] = 1
             continue        
-        # 右方
-        elif Map.matrix[cur_pos[0]][cur_pos[1]+1] == 0 or Map.matrix[cur_pos[0]][cur_pos[1]+1] == 2:
-            path_list.append((cur_pos[0],cur_pos[1]+1))
-            Map.matrix[cur_pos[0]][cur_pos[1]+1] = 1
+        # 右方 - 检查边界
+        elif col < Map.width - 1 and (search_matrix[row][col+1] == 0 or search_matrix[row][col+1] == 2):
+            path_list.append((row, col+1))
+            search_matrix[row][col+1] = 1
             continue        
         else: 
             path_list.pop()
     else:
         print("Error\n")
         
+    # 显示完整路径
     for p in path_list:
-        update_map_search(canvas, Map.matrix, Map.path, p)
+        update_map_search(scene, Map.matrix, Map.path, p, visited=visited_set, final_path_points=final_path)
+        time.sleep(0.05)  # 添加延迟以便看到动画
+        QApplication.processEvents()  # 处理事件以更新界面
         
     # check_reach()
 
 def movement_bfs():
     global movement_list
     global click_counter, back_counter
+    global visited_paths, final_path
+
+    # 清空之前的路径记录
+    visited_paths = set()
+    final_path = []
+    
+    # 使用地图副本进行搜索，避免修改原始地图
+    search_matrix = copy.deepcopy(Map.matrix)
     end = (Map.destination[0],Map.destination[1])
     start = (Map.start[0],Map.start[1])
     cur_pos = movement_list[-1]
     path_list = []
+    visited_set = set()  # 记录已访问的节点
     #创建队列 起点入队,起点没有上一节点所里这里的联系用-1表示
     queue = deque()
     queue.append((start[0],start[1],-1))
     while len(queue)>0:
         curnode = queue.popleft()
         path_list.append(curnode)
+        visited_set.add((curnode[0], curnode[1]))  # 记录已访问
         #找到迷宫终点跳出循环
         if curnode[0] == end[0] and curnode[1] == end[1]:
             cur = path_list[-1]
@@ -471,18 +586,22 @@ def movement_bfs():
                 # print(path)
                 # print(path_list)
             print("RunOutSuccessfly\n")
+            final_path = path_result.copy()  # 保存最终路径
+            # 显示完整路径
             for p in path_result:
-                update_map_search(canvas, Map.matrix, Map.path, p)
+                update_map_search(scene, Map.matrix, Map.path, p, visited=visited_set, final_path_points=final_path)
+                time.sleep(0.05)  # 添加延迟以便看到动画
+                QApplication.processEvents()  # 处理事件以更新界面
             return True    
         #未找到终点执行循环
         for dir in dirs:
             nextnode = dir(curnode[0],curnode[1])
             #判断下一节点是否可通过
-            if Map.matrix[nextnode[0]][nextnode[1]] == 0 or Map.matrix[nextnode[0]][nextnode[1]] == 2:
+            if search_matrix[nextnode[0]][nextnode[1]] == 0 or search_matrix[nextnode[0]][nextnode[1]] == 2:
                 #队列元素与nextnode形式不同，队列中要加入节点间的联系，上面知道联系储存在path_list中
                 queue.append((nextnode[0],nextnode[1],path_list.index(curnode)))
                 #将循环过的节点标记为走过
-                Map.matrix[nextnode[0]][nextnode[1]] = -2
+                search_matrix[nextnode[0]][nextnode[1]] = -2
                 #这里不能break 因为最广是探索所有的路径 所以要找到所有可通过的 最深的只要找到一个就可以了 所以栈那里需要break
     else:
         print("Error")
@@ -490,6 +609,12 @@ def movement_bfs():
 def movement_ucs():
     global movement_list
     global click_counter, back_counter
+    global visited_paths, final_path
+
+    # 清空之前的路径记录
+    visited_paths = set()
+    final_path = []
+    
     end = (Map.destination[0],Map.destination[1])
     start = (Map.start[0],Map.start[1])
     cur_pos = start
@@ -497,6 +622,7 @@ def movement_ucs():
     # 初始化相关参数
     result = []
     explored = set()
+    visited_set = set()  # 记录已访问的节点
     frontier = queue.PriorityQueue()
     # 定义起始状态，其中包括开始的位置，对应的行动方案和行动代价
     start = ((Map.start[0],Map.start[1]), [], 0)
@@ -507,6 +633,7 @@ def movement_ucs():
     while not frontier.empty():
         # 获取当前节点的各项信息
         (node, move, cost) = frontier.get()
+        visited_set.add(node)  # 记录已访问
         # 如果弹出的节点状态满足目标要求，停止循环
         if node == (end[0],end[1]):
             result = move
@@ -522,17 +649,38 @@ def movement_ucs():
                 newNode = (child, newMove, newCost)
                 frontier.put(newNode, newCost)
     # 返回计算结果，即一个行动方案
+    if not result:
+        print("Error: No path found\n")
+        return result
     
+    # 构建最终路径
+    final_path_list = [(Map.start[0], Map.start[1])]
+    temp_pos = (Map.start[0], Map.start[1])
     for p in result:
-        update_map_search(canvas, Map.matrix, Map.path, (cur_pos[0]+p[0],cur_pos[1]+p[1]))
+        temp_pos = (temp_pos[0]+p[0], temp_pos[1]+p[1])
+        final_path_list.append(temp_pos)
+    final_path = final_path_list.copy()
+    
+    # 显示完整路径
+    for p in result:
         cur_pos = (cur_pos[0]+p[0],cur_pos[1]+p[1])
         path.append(cur_pos)
+        update_map_search(scene, Map.matrix, Map.path, cur_pos, visited=visited_set, final_path_points=final_path)
+        time.sleep(0.05)  # 添加延迟以便看到动画
+        QApplication.processEvents()  # 处理事件以更新界面
     print("RunOutSuccessfly\n")
     print(path)
     return result
 
 def movement_astar():
-    lab=copy.copy(Map.matrix)
+    global visited_paths, final_path
+
+    # 清空之前的路径记录
+    visited_paths = set()
+    final_path = []
+    
+    # 使用地图副本进行搜索，避免修改原始地图
+    lab = copy.deepcopy(Map.matrix)
     end = (Map.destination[0],Map.destination[1])
     start = (Map.start[0],Map.start[1])
     (i_s, j_s) = start
@@ -548,13 +696,15 @@ def movement_astar():
     # small variation for easier code, state is (coord_tuple, previous, path_cost, heuristic_cost)
     fringe = [((i_s, j_s), list(), 0, heuristic(i_s, j_s))]
     visited = {} # empty set
+    visited_set = set()  # 记录已访问的节点
 
-    while True:
+    while fringe:
         # get first state (least cost)
         state = fringe.pop(0)
         # print(state)
         # goal check
         (i, j) = state[0]
+        visited_set.add((i, j))  # 记录已访问
         # print(state[0])
         
         if (i, j) == end:
@@ -562,8 +712,12 @@ def movement_astar():
             path.reverse()
             print(path)
             print("RunOutSuccessfly\n")
+            final_path = path.copy()  # 保存最终路径
+            # 显示完整路径
             for p in path:
-                update_map_search(canvas, Map.matrix, Map.path, (p[0],p[1]))
+                update_map_search(scene, Map.matrix, Map.path, (p[0],p[1]), visited=visited_set, final_path_points=final_path)
+                time.sleep(0.05)  # 添加延迟以便看到动画
+                QApplication.processEvents()  # 处理事件以更新界面
             return path
 
         # set the cost (path is enough since the heuristic won't change)
@@ -573,11 +727,11 @@ def movement_astar():
         neighbor = list()
         if i > 0 and lab[i-1][j] >= 0 : 
             neighbor.append((i-1, j))
-        if i < height and lab[i+1][j] >= 0 :
+        if i < height - 1 and lab[i+1][j] >= 0 :
             neighbor.append((i+1, j))
         if j > 0 and lab[i][j-1] >= 0 :
             neighbor.append((i, j-1))
-        if j < width and lab[i][j+1] >= 0 :
+        if j < width - 1 and lab[i][j+1] >= 0 :
             neighbor.append((i, j+1))
 
         for n in neighbor:
@@ -588,6 +742,10 @@ def movement_astar():
 
         # resort the list (SHOULD use a priority queue here to avoid re-sorting all the time)
         fringe.sort(key=comp)
+    
+    # 如果没有找到路径
+    print("Error: No path found\n")
+    return []
 
 def movement_a():
     global movement_list
@@ -595,7 +753,7 @@ def movement_a():
 
     cur_pos = movement_list[-1]
 
-    update_map(canvas, Map.matrix, Map.path, movement_list)
+    update_map(scene, Map.matrix, Map.path, movement_list)
     check_reach()
 
 def check_reach():
@@ -604,32 +762,97 @@ def check_reach():
         print("Congratulations! You Eat all the food! {}".format(back_counter))
         x0, y0 = cols * cell_width / 2 - 200, 30
         x1, y1 = x0 + 400, y0 + 40
-        canvas.create_rectangle(x0, y0, x1, y1, fill = '#F2F2F2', outline ='#525288', width = 3)
-        canvas.create_text(cols * cell_width / 2, y0 + 20, text = "Congratulations! You Eat all the food! ", fill = "#525288")
+        rect = QGraphicsRectItem(x0, y0, x1 - x0, y1 - y0)
+        rect.setBrush(QBrush(QColor('#F2F2F2')))
+        rect.setPen(QPen(QColor('#525288'), 3))
+        scene.addItem(rect)
+        text = QGraphicsTextItem("Congratulations! You Eat all the food! ")
+        text.setPos(cols * cell_width / 2 - 150, y0 + 20)
+        text.setDefaultTextColor(QColor("#525288"))
+        scene.addItem(text)
         next_Map_flag = True
         return True
 
-def _event_handler(event):
-    if event.keysym in ['Left', 'Right', 'Up', 'Down', 'w', 'a', 's', 'd']:
-        movement_update_handler(event)
-    elif event.keysym == 'F1':
-        movement_dfs()
-    elif event.keysym == 'F2':
-        movement_bfs()
-    elif event.keysym == 'F3':
-        movement_ucs()
-    elif event.keysym == 'F4':
-        movement_astar()
-    elif event.keysym == 'F5':
-        windows.quit()
-
-    elif event.keysym == 'F9':
+class PacmanWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        global scene, view, status_label
+        
+        self.setWindowTitle("PACMAN")
+        # 为菜单栏和状态栏预留空间
+        menu_height = self.menuBar().height() if self.menuBar() else 25
+        status_height = 30
+        self.setFixedSize(width, height + menu_height + status_height)
+        
+        # 创建菜单栏（必须在设置窗口大小之前）
+        menubar = self.menuBar()
+        # 在 macOS 上强制显示菜单栏在窗口内（而不是系统菜单栏）
+        try:
+            menubar.setNativeMenuBar(False)
+        except:
+            pass  # 如果方法不存在则忽略
+        filemenu = menubar.addMenu('设置')
+        dfs_action = filemenu.addAction('深度优先', movement_dfs)
+        dfs_action.setShortcut('F1')
+        bfs_action = filemenu.addAction('广度优先', movement_bfs)
+        bfs_action.setShortcut('F2')
+        ucs_action = filemenu.addAction('一致代价', movement_ucs)
+        ucs_action.setShortcut('F3')
+        astar_action = filemenu.addAction('A*', movement_astar)
+        astar_action.setShortcut('F4')
+        filemenu.addSeparator()
+        exit_action = filemenu.addAction('退出', self.close)
+        exit_action.setShortcut('F5')
+        restart_action = filemenu.addAction('重新开始', generate_matrix)
+        restart_action.setShortcut('F9')
+        
+        # 创建场景和视图
+        scene = QGraphicsScene()
+        scene.setSceneRect(0, 0, width, height)
+        scene.setBackgroundBrush(QBrush(QColor("#F2F2F2")))
+        
+        view = QGraphicsView(scene, self)
+        view.setFixedSize(width, height)
+        view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setCentralWidget(view)
+        
+        # 创建状态栏
+        status_label = QLabel("PAC Man")
+        self.statusBar().addWidget(status_label)
+        
+        # 初始化游戏
+        global Map, movement_list
+        # 使用保存的类引用来创建实例
+        Map = _MapClass(cols, rows)
+        movement_list = [Map.start]
         generate_matrix()
-
+        
+    def keyPressEvent(self, event):
+        key = event.key()
+        if key == Qt.Key.Key_Left or key == Qt.Key.Key_A:
+            movement_update_handler(type('obj', (object,), {'keysym': 'Left'})())
+        elif key == Qt.Key.Key_Right or key == Qt.Key.Key_D:
+            movement_update_handler(type('obj', (object,), {'keysym': 'Right'})())
+        elif key == Qt.Key.Key_Up or key == Qt.Key.Key_W:
+            movement_update_handler(type('obj', (object,), {'keysym': 'Up'})())
+        elif key == Qt.Key.Key_Down or key == Qt.Key.Key_S:
+            movement_update_handler(type('obj', (object,), {'keysym': 'Down'})())
+        elif key == Qt.Key.Key_F1:
+            movement_dfs()
+        elif key == Qt.Key.Key_F2:
+            movement_bfs()
+        elif key == Qt.Key.Key_F3:
+            movement_ucs()
+        elif key == Qt.Key.Key_F4:
+            movement_astar()
+        elif key == Qt.Key.Key_F5:
+            self.close()
+        elif key == Qt.Key.Key_F9:
+            generate_matrix()
 
 if __name__ == '__main__':
     # 基础参数
-
     cell_width = 20
     rows = 31
     cols = 31
@@ -637,43 +860,17 @@ if __name__ == '__main__':
     width = cell_width * cols
 
     click_counter, total_counter, back_counter = 0, 0, 0
-
-    windows = tk.Tk()
-    windows.title("PACMAN")
-    windows.resizable(0, 0)
+    scene = None
+    view = None
+    status_label = None
+    Map = None
+    movement_list = None
+    next_Map_flag = False
+    
     t0 = int(time.time())
     t1 = t0
 
-    #　创建菜单栏
-    menubar = tk.Menu(windows)
-
-    filemenu = tk.Menu(menubar, tearoff=0)
-    menubar.add_cascade(label='设置', menu=filemenu)
-    filemenu.add_command(label='深度优先', command=movement_dfs, accelerator='F1')
-    filemenu.add_command(label='广度优先', command=movement_bfs, accelerator='F2')
-    filemenu.add_command(label='一致代价', command=movement_ucs, accelerator='F3')
-    filemenu.add_command(label='A*', command=movement_astar, accelerator='F4')
-    filemenu.add_separator()
-    filemenu.add_command(label='退出', command=windows.quit, accelerator='F5')
-    filemenu.add_command(label='重新开始', command=generate_matrix, accelerator='F9')
-
-    windows.config(menu=menubar)
-    # end 创建菜单栏
-
-    # 创建状态栏
-    label = tk.Label(windows, text="PAC Man", bd=1, anchor='w')  # anchor left align W -- WEST
-    label.pack(side="bottom", fill='x')
-
-    canvas = tk.Canvas(windows, background="#F2F2F2", width = width, height = height)
-    canvas.pack()
-
-    Map = Map(cols, rows)
-    movement_list = [Map.start]
-    # Map.print_matrix()
-    generate_matrix()
-    
-    # canvas.bind("<Button-1>", _paint_answer_path)
-    # canvas.bind("<Button-3>", _reset_answer_path)
-    canvas.bind_all("<KeyPress>", _event_handler)
-
-    windows.mainloop()
+    app = QApplication([])
+    windows = PacmanWindow()
+    windows.show()
+    app.exec()
